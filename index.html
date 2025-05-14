@@ -1,0 +1,1777 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistema de Ventas y Apartados (DB) v4 - Corregido</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <style>
+      body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+      .tab-content { display: none; }
+      .tab-content.active { display: block; }
+      .modal { display: none; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); }
+      .modal-content { background-color: #fefefe; margin: 8% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 0.5rem; }
+      .modal-content-lg { max-width: 700px; } /* For abonos modal */
+      .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+      .close-button:hover, .close-button:focus { color: black; text-decoration: none; }
+      .loading { text-align: center; padding: 20px; font-style: italic; color: #6b7280; }
+      .comment-text { font-size: 0.8rem; color: #4b5563; margin-top: 2px; white-space: pre-wrap; max-width: 200px; overflow-wrap: break-word; }
+      .action-button { padding: 0.25rem 0.5rem; font-size: 0.75rem; border-radius: 0.375rem; margin-right: 0.25rem; transition: background-color 0.2s; border: 1px solid transparent; }
+      .btn-icon { background: none; border: none; cursor: pointer; padding: 0.3rem; font-size:0.9rem; }
+      .btn-icon:hover { opacity:0.7; }
+      .btn-green { background-color: #10B981; color: white; } .btn-green:hover { background-color: #059669; }
+      .btn-red { background-color: #EF4444; color: white; } .btn-red:hover { background-color: #DC2626; }
+      .btn-blue { background-color: #3B82F6; color: white; } .btn-blue:hover { background-color: #2563EB; }
+      .btn-yellow { background-color: #F59E0B; color: white; } .btn-yellow:hover { background-color: #D97706; }
+      .btn-gray { background-color: #6B7280; color: white; } .btn-gray:hover { background-color: #4B5563; }
+      .btn-disabled { background-color: #D1D5DB; color: #6B7280; cursor: not-allowed; }
+      .input-style { padding: 0.5rem 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.375rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); width: 100%; }
+      .input-style:focus { outline: none; border-color: #3B82F6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3); }
+      .btn-main { display: inline-flex; justify-content: center; padding: 0.5rem 1rem; border: 1px solid transparent; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); font-size: 0.875rem; font-medium; border-radius: 0.375rem; color: white; }
+      .table-header { padding: 0.75rem 1.5rem; text-align: left; font-size: 0.75rem; font-medium; color: #374151; text-transform: uppercase; letter-spacing: 0.05em; }
+      .table-cell { padding: 1rem 1.5rem; font-size: 0.875rem; }
+    </style>
+  </head>
+  <body class="p-4 md:p-8">
+    <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">
+      Sistema de Ventas y Apartados (DB) v4
+    </h1>
+
+    <div class="mb-6 border-b border-gray-200">
+      <nav class="flex space-x-2 md:space-x-4 flex-wrap" aria-label="Tabs">
+        <button
+          onclick="changeTab('clientes')"
+          class="tab-button active-tab px-3 py-2 font-medium text-sm rounded-md text-white bg-blue-600 mb-2"
+          data-tab="clientes"
+        >
+          <i class="fas fa-users mr-1"></i> Clientes
+        </button>
+        <button
+          onclick="changeTab('ventas')"
+          class="tab-button inactive-tab px-3 py-2 font-medium text-sm rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 mb-2"
+          data-tab="ventas"
+        >
+          <i class="fas fa-cash-register mr-1"></i> Ventas
+        </button>
+        <button
+          onclick="changeTab('apartados')"
+          class="tab-button inactive-tab px-3 py-2 font-medium text-sm rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 mb-2"
+          data-tab="apartados"
+        >
+          <i class="fas fa-box-open mr-1"></i> Apartados
+        </button>
+        <button
+          onclick="changeTab('abonos')"
+          class="tab-button inactive-tab px-3 py-2 font-medium text-sm rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 mb-2"
+          data-tab="abonos"
+        >
+          <i class="fas fa-hand-holding-usd mr-1"></i> Abonos
+        </button>
+        <button
+          onclick="changeTab('consultas')"
+          class="tab-button inactive-tab px-3 py-2 font-medium text-sm rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 mb-2"
+          data-tab="consultas"
+        >
+          <i class="fas fa-search mr-1"></i> Consultas
+        </button>
+      </nav>
+    </div>
+
+    <div id="tab-content-container">
+      <div
+        id="clientes"
+        class="tab-content active p-4 bg-white rounded-lg shadow"
+      >
+        <h2 class="text-xl font-semibold mb-4 text-gray-700">
+          Gestión de Clientes
+        </h2>
+        <form
+          id="form-cliente"
+          class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"
+        >
+          <div>
+            <label
+              for="cliente-nombre"
+              class="block text-sm font-medium text-gray-700"
+              >Nombre:</label
+            ><input
+              type="text"
+              id="cliente-nombre"
+              required
+              class="mt-1 block w-full input-style"
+            />
+          </div>
+          <div>
+            <label
+              for="cliente-identificacion"
+              class="block text-sm font-medium text-gray-700"
+              >Identificación:</label
+            ><input
+              type="text"
+              id="cliente-identificacion"
+              class="mt-1 block w-full input-style"
+            />
+          </div>
+          <div>
+            <label
+              for="cliente-telefono"
+              class="block text-sm font-medium text-gray-700"
+              >Teléfono:</label
+            ><input
+              type="tel"
+              id="cliente-telefono"
+              class="mt-1 block w-full input-style"
+            />
+          </div>
+          <div>
+            <label
+              for="cliente-email"
+              class="block text-sm font-medium text-gray-700"
+              >Email:</label
+            ><input
+              type="email"
+              id="cliente-email"
+              class="mt-1 block w-full input-style"
+            />
+          </div>
+          <div class="md:col-span-2">
+            <button
+              type="submit"
+              class="btn-main bg-blue-600 hover:bg-blue-700"
+            >
+              <i class="fas fa-plus mr-2"></i> Añadir Cliente
+            </button>
+          </div>
+        </form>
+        <h3 class="text-lg font-semibold mb-2 text-gray-600">
+          Lista de Clientes
+        </h3>
+        <div id="loading-clientes" class="loading">Cargando clientes...</div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="table-header">ID</th>
+                <th class="table-header">Nombre</th>
+                <th class="table-header">Identificación</th>
+                <th class="table-header">Teléfono</th>
+                <th class="table-header">Email</th>
+                <th class="table-header">Acciones</th>
+              </tr>
+            </thead>
+            <tbody
+              id="lista-clientes"
+              class="bg-white divide-y divide-gray-200"
+            ></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="ventas" class="tab-content p-4 bg-white rounded-lg shadow">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700">
+          Registro de Ventas a Crédito
+        </h2>
+        <form
+          id="form-venta"
+          class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"
+        >
+          <div>
+            <label
+              for="venta-cliente"
+              class="block text-sm font-medium text-gray-700"
+              >Cliente:</label
+            ><select
+              id="venta-cliente"
+              required
+              class="mt-1 block w-full input-style"
+            >
+              <option value="">Seleccione un cliente</option>
+            </select>
+          </div>
+          <div>
+            <label
+              for="venta-producto"
+              class="block text-sm font-medium text-gray-700"
+              >Producto/Descripción:</label
+            ><input
+              type="text"
+              id="venta-producto"
+              required
+              class="mt-1 block w-full input-style"
+            />
+          </div>
+          <div>
+            <label
+              for="venta-monto"
+              class="block text-sm font-medium text-gray-700"
+              >Monto Total ($):</label
+            ><input
+              type="number"
+              id="venta-monto"
+              required
+              min="0.01"
+              step="0.01"
+              class="mt-1 block w-full input-style"
+            />
+          </div>
+          <div>
+            <label
+              for="venta-fecha"
+              class="block text-sm font-medium text-gray-700"
+              >Fecha:</label
+            ><input
+              type="date"
+              id="venta-fecha"
+              required
+              class="mt-1 block w-full input-style"
+            />
+          </div>
+          <div class="md:col-span-2">
+            <button
+              type="submit"
+              class="btn-main bg-green-600 hover:bg-green-700"
+            >
+              <i class="fas fa-save mr-2"></i> Registrar Venta
+            </button>
+          </div>
+        </form>
+        <h3 class="text-lg font-semibold mb-2 text-gray-600">
+          Lista de Ventas
+        </h3>
+        <div id="loading-ventas" class="loading">Cargando ventas...</div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="table-header">ID</th>
+                <th class="table-header">Cliente</th>
+                <th class="table-header">Producto</th>
+                <th class="table-header">Monto</th>
+                <th class="table-header">Saldo</th>
+                <th class="table-header">Fecha</th>
+                <th class="table-header">Estado</th>
+                <th class="table-header">Acciones</th>
+              </tr>
+            </thead>
+            <tbody
+              id="lista-ventas"
+              class="bg-white divide-y divide-gray-200"
+            ></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="apartados" class="tab-content p-4 bg-white rounded-lg shadow">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700">
+          Gestión de Apartados
+        </h2>
+        <form
+          id="form-apartado"
+          class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"
+        >
+          <div>
+            <label
+              for="apartado-cliente"
+              class="block text-sm font-medium text-gray-700"
+              >Cliente:</label
+            ><select
+              id="apartado-cliente"
+              required
+              class="mt-1 block w-full input-style"
+            >
+              <option value="">Seleccione un cliente</option>
+            </select>
+          </div>
+          <div>
+            <label
+              for="apartado-producto"
+              class="block text-sm font-medium text-gray-700"
+              >Producto/Descripción:</label
+            ><input
+              type="text"
+              id="apartado-producto"
+              required
+              class="mt-1 block w-full input-style"
+            />
+          </div>
+          <div>
+            <label
+              for="apartado-monto"
+              class="block text-sm font-medium text-gray-700"
+              >Monto Total ($):</label
+            ><input
+              type="number"
+              id="apartado-monto"
+              required
+              min="0.01"
+              step="0.01"
+              class="mt-1 block w-full input-style"
+            />
+          </div>
+          <div>
+            <label
+              for="apartado-fecha"
+              class="block text-sm font-medium text-gray-700"
+              >Fecha Creación:</label
+            ><input
+              type="date"
+              id="apartado-fecha"
+              required
+              class="mt-1 block w-full input-style"
+            />
+          </div>
+          <div class="md:col-span-2">
+            <button
+              type="submit"
+              class="btn-main bg-yellow-500 hover:bg-yellow-600 text-white"
+            >
+              <i class="fas fa-box-open mr-2"></i> Crear Apartado
+            </button>
+          </div>
+        </form>
+        <h3 class="text-lg font-semibold mb-2 text-gray-600">
+          Lista de Apartados
+        </h3>
+        <div id="loading-apartados" class="loading">Cargando apartados...</div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="table-header">ID</th>
+                <th class="table-header">Cliente</th>
+                <th class="table-header">Producto</th>
+                <th class="table-header">Monto</th>
+                <th class="table-header">Abonado</th>
+                <th class="table-header">Saldo</th>
+                <th class="table-header">Estado</th>
+                <th class="table-header">F. Creación</th>
+                <th class="table-header">F. Entrega</th>
+                <th class="table-header">Acciones</th>
+              </tr>
+            </thead>
+            <tbody
+              id="lista-apartados"
+              class="bg-white divide-y divide-gray-200"
+            ></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="abonos" class="tab-content p-4 bg-white rounded-lg shadow">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700">
+          Registro de Abonos
+        </h2>
+        <form
+          id="form-abono"
+          class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"
+        >
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700"
+              >Abonar a:</label
+            >
+            <div class="mt-1 flex rounded-md shadow-sm">
+              <input
+                type="radio"
+                name="abonoTipoReferencia"
+                id="abonoTipoVenta"
+                value="venta"
+                checked
+                class="form-radio h-4 w-4 text-blue-600 mr-1"
+              /><label for="abonoTipoVenta" class="mr-4 text-sm text-gray-700"
+                >Venta</label
+              ><input
+                type="radio"
+                name="abonoTipoReferencia"
+                id="abonoTipoApartado"
+                value="apartado"
+                class="form-radio h-4 w-4 text-purple-600 mr-1"
+              /><label for="abonoTipoApartado" class="text-sm text-gray-700"
+                >Apartado</label
+              >
+            </div>
+          </div>
+          <div>
+            <label
+              for="abono-referencia-id"
+              class="block text-sm font-medium text-gray-700"
+              ><span id="label-abono-referencia">Venta Pendiente:</span></label
+            ><select
+              id="abono-referencia-id"
+              required
+              class="mt-1 block w-full input-style"
+            >
+              <option value="">Seleccione</option>
+            </select>
+          </div>
+          <div>
+            <label
+              for="abono-monto"
+              class="block text-sm font-medium text-gray-700"
+              >Monto Abono ($):</label
+            ><input
+              type="number"
+              id="abono-monto"
+              required
+              min="0.01"
+              step="0.01"
+              class="mt-1 block w-full input-style"
+            />
+          </div>
+          <div>
+            <label
+              for="abono-fecha"
+              class="block text-sm font-medium text-gray-700"
+              >Fecha Abono:</label
+            ><input
+              type="date"
+              id="abono-fecha"
+              required
+              class="mt-1 block w-full input-style"
+            />
+          </div>
+          <div class="md:col-span-2">
+            <label
+              for="abono-comentarios"
+              class="block text-sm font-medium text-gray-700"
+              >Comentarios:</label
+            ><textarea
+              id="abono-comentarios"
+              rows="3"
+              class="mt-1 block w-full input-style"
+            ></textarea>
+          </div>
+          <div class="md:col-span-2">
+            <button
+              type="submit"
+              class="btn-main bg-purple-600 hover:bg-purple-700"
+            >
+              <i class="fas fa-dollar-sign mr-2"></i> Registrar Abono
+            </button>
+          </div>
+        </form>
+        <h3 class="text-lg font-semibold mb-2 text-gray-600">
+          Historial de Abonos
+        </h3>
+        <div id="loading-abonos" class="loading">Cargando abonos...</div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="table-header">ID</th>
+                <th class="table-header">Venta ID</th>
+                <th class="table-header">Apart. ID</th>
+                <th class="table-header">Monto</th>
+                <th class="table-header">Fecha</th>
+                <th class="table-header">Comentarios</th>
+              </tr>
+            </thead>
+            <tbody
+              id="lista-abonos"
+              class="bg-white divide-y divide-gray-200"
+            ></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="consultas" class="tab-content p-4 bg-white rounded-lg shadow">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700">
+          Consultas y Reportes
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div>
+            <label
+              for="consulta-cliente"
+              class="block text-sm font-medium text-gray-700"
+              >Cliente:</label
+            ><select
+              id="consulta-cliente"
+              class="mt-1 block w-full input-style"
+            >
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div>
+            <label
+              for="consulta-tipo"
+              class="block text-sm font-medium text-gray-700"
+              >Tipo:</label
+            ><select id="consulta-tipo" class="mt-1 block w-full input-style">
+              <option value="todos">Todas</option>
+              <option value="ventas">Ventas</option>
+              <option value="apartados">Apartados</option>
+            </select>
+          </div>
+          <div>
+            <label
+              for="consulta-estado"
+              class="block text-sm font-medium text-gray-700"
+              >Estado:</label
+            ><select id="consulta-estado" class="mt-1 block w-full input-style">
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div class="md:col-span-3">
+            <button
+              id="btn-filtrar"
+              class="btn-main bg-indigo-600 hover:bg-indigo-700 w-full md:w-auto"
+            >
+              <i class="fas fa-filter mr-2"></i> Aplicar Filtros
+            </button>
+          </div>
+        </div>
+        <h3 class="text-lg font-semibold mb-2 text-gray-600">Resultados</h3>
+        <div id="loading-consultas" class="loading">Cargando...</div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="table-header">ID</th>
+                <th class="table-header">Tipo</th>
+                <th class="table-header">Cliente</th>
+                <th class="table-header">Producto</th>
+                <th class="table-header">Monto</th>
+                <th class="table-header">Saldo</th>
+                <th class="table-header">Fecha</th>
+                <th class="table-header">Estado</th>
+                <th class="table-header">Acciones</th>
+              </tr>
+            </thead>
+            <tbody
+              id="lista-consultas"
+              class="bg-white divide-y divide-gray-200"
+            ></tbody>
+          </table>
+        </div>
+        <div
+          id="total-pendiente-consultas"
+          class="mt-4 text-right font-semibold text-lg text-red-600"
+        ></div>
+      </div>
+    </div>
+
+    <div id="abonosModal" class="modal">
+      <div class="modal-content modal-content-lg">
+        <span class="close-button" onclick="closeModal('abonosModal')"
+          >&times;</span
+        >
+        <h3 class="text-lg font-semibold mb-4 text-gray-700">
+          Detalle de Abonos para <span id="modal-referencia-tipo"></span> #<span
+            id="modal-referencia-id"
+            class="font-bold"
+          ></span>
+        </h3>
+        <div id="loading-modal-abonos" class="loading">Cargando abonos...</div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="table-header">ID</th>
+                <th class="table-header">Monto</th>
+                <th class="table-header">Fecha</th>
+                <th class="table-header">Comentarios</th>
+              </tr>
+            </thead>
+            <tbody
+              id="modal-lista-abonos"
+              class="bg-white divide-y divide-gray-200"
+            ></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="editClienteModal" class="modal">
+      <div class="modal-content">
+        <span class="close-button" onclick="closeModal('editClienteModal')"
+          >&times;</span
+        >
+        <h3 class="text-lg font-semibold mb-4 text-gray-700">
+          Editar Cliente
+          <span id="editClienteModalTitleId" class="font-bold"></span>
+        </h3>
+        <form id="form-edit-cliente">
+          <input type="hidden" id="edit-cliente-id" />
+          <div class="mb-4">
+            <label
+              for="edit-cliente-nombre"
+              class="block text-sm font-medium text-gray-700"
+              >Nombre:</label
+            >
+            <input
+              type="text"
+              id="edit-cliente-nombre"
+              class="mt-1 block w-full input-style"
+              disabled
+            />
+          </div>
+          <div class="mb-4">
+            <label
+              for="edit-cliente-telefono"
+              class="block text-sm font-medium text-gray-700"
+              >Teléfono:</label
+            >
+            <input
+              type="tel"
+              id="edit-cliente-telefono"
+              class="mt-1 block w-full input-style"
+            />
+          </div>
+          <div class="mb-4">
+            <label
+              for="edit-cliente-email"
+              class="block text-sm font-medium text-gray-700"
+              >Email:</label
+            >
+            <input
+              type="email"
+              id="edit-cliente-email"
+              class="mt-1 block w-full input-style"
+            />
+          </div>
+          <div class="text-right">
+            <button
+              type="button"
+              onclick="closeModal('editClienteModal')"
+              class="btn-main bg-gray-300 hover:bg-gray-400 text-gray-800 mr-2"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="btn-main bg-blue-600 hover:bg-blue-700"
+            >
+              Guardar Cambios
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="editFechaModal" class="modal">
+      <div class="modal-content">
+        <span class="close-button" onclick="closeModal('editFechaModal')"
+          >&times;</span
+        >
+        <h3 class="text-lg font-semibold mb-4 text-gray-700">
+          Editar Fecha de <span id="editFechaModalTipo"></span> #<span
+            id="editFechaModalId"
+            class="font-bold"
+          ></span>
+        </h3>
+        <form id="form-edit-fecha">
+          <input type="hidden" id="edit-fecha-item-id" />
+          <input type="hidden" id="edit-fecha-item-tipo" />
+          <div class="mb-4">
+            <label
+              for="edit-fecha-nueva"
+              class="block text-sm font-medium text-gray-700"
+              >Nueva Fecha:</label
+            >
+            <input
+              type="date"
+              id="edit-fecha-nueva"
+              required
+              class="mt-1 block w-full input-style"
+            />
+          </div>
+          <div class="text-right">
+            <button
+              type="button"
+              onclick="closeModal('editFechaModal')"
+              class="btn-main bg-gray-300 hover:bg-gray-400 text-gray-800 mr-2"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="btn-main bg-green-600 hover:bg-green-700"
+            >
+              Guardar Fecha
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      // --- Configuration ---
+      const API_BASE_URL = "http://localhost:3001/api";
+
+      // --- Global State ---
+      let currentClientes = [];
+      let currentVentas = [];
+      let currentApartados = [];
+      let currentAbonos = [];
+
+      // --- Utility Functions ---
+      function formatCurrency(amount) {
+        return new Intl.NumberFormat("es-CO", {
+          style: "currency",
+          currency: "COP",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(amount);
+      }
+      function formatDate(dateString) {
+        if (!dateString) return "-";
+        const date = new Date(dateString);
+        const offset = date.getTimezoneOffset();
+        const adjustedDate = new Date(date.valueOf() + offset * 60 * 1000);
+        return adjustedDate.toLocaleDateString("es-CO", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        });
+      }
+      function showLoading(elementId, show = true) {
+        const element = document.getElementById(elementId);
+        if (element) element.style.display = show ? "block" : "none";
+        const listId = elementId.replace("loading-", "lista-");
+        const listElement = document.getElementById(listId);
+        if (listElement) listElement.style.display = show ? "none" : "";
+        if (!show && listElement && listElement.tagName === "TBODY")
+          listElement.style.display = "table-row-group";
+        if (elementId === "loading-modal-abonos") {
+          const modalList = document.getElementById("modal-lista-abonos");
+          if (modalList)
+            modalList.style.display = show ? "none" : "table-row-group";
+        }
+      }
+      function escapeHtml(unsafe) {
+        if (typeof unsafe !== "string") return "";
+        return unsafe
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      // --- API Fetch Functions ---
+      async function fetchApi(endpoint, options = {}) {
+        const url = `${API_BASE_URL}${endpoint}`;
+        try {
+          const response = await fetch(url, options);
+          if (!response.ok) {
+            let errorData;
+            try {
+              errorData = await response.json();
+            } catch (e) {}
+            const errorMessage =
+              errorData?.error ||
+              `HTTP error ${response.status}: ${response.statusText}`;
+            console.error(`API Error (${url}):`, errorMessage, errorData);
+            throw new Error(errorMessage);
+          }
+          if (response.status === 204) return null;
+          return await response.json();
+        } catch (error) {
+          console.error(`Network or Fetch Error (${url}):`, error);
+          showNotification(
+            `Error de red o servidor: ${error.message}`,
+            "error"
+          );
+          throw error;
+        }
+      }
+
+      async function fetchClientes() {
+        showLoading("loading-clientes");
+        try {
+          const clientesData = await fetchApi("/clientes");
+          currentClientes = clientesData || [];
+          renderizarClientes(currentClientes);
+          populateClienteSelects(currentClientes);
+        } catch (error) {
+          console.error("Error in fetchClientes:", error);
+        } finally {
+          showLoading("loading-clientes", false);
+        }
+      }
+
+      async function fetchVentas() {
+        showLoading("loading-ventas");
+        try {
+          const ventasData = await fetchApi("/ventas");
+          currentVentas = ventasData || [];
+          renderizarVentas(currentVentas);
+          updateAbonoReferenciaSelect(); // Actualizar select de abonos
+          // No llamar a filtrarYRenderizarConsultas aquí directamente, se maneja al cambiar de pestaña
+        } catch (error) {
+          console.error("Error in fetchVentas:", error);
+        } finally {
+          showLoading("loading-ventas", false);
+        }
+      }
+
+      async function fetchApartados() {
+        showLoading("loading-apartados");
+        try {
+          const apartadosData = await fetchApi("/apartados");
+          currentApartados = apartadosData || [];
+          renderizarApartados(currentApartados);
+          updateAbonoReferenciaSelect(); // Actualizar select de abonos
+        } catch (error) {
+          console.error("Error in fetchApartados:", error);
+        } finally {
+          showLoading("loading-apartados", false);
+        }
+      }
+
+      async function fetchAbonos() {
+        showLoading("loading-abonos");
+        try {
+          const abonosData = await fetchApi("/abonos");
+          currentAbonos = abonosData || [];
+          renderizarAbonosHistorial(currentAbonos);
+        } catch (error) {
+          console.error("Error in fetchAbonos:", error);
+        } finally {
+          showLoading("loading-abonos", false);
+        }
+      }
+
+      async function fetchAbonosPorReferencia(tipoReferencia, referenciaId) {
+        showLoading("loading-modal-abonos");
+        const listaModalAbonos = document.getElementById("modal-lista-abonos");
+        listaModalAbonos.innerHTML = "";
+        try {
+          const queryParam =
+            tipoReferencia === "venta"
+              ? `ventaId=${referenciaId}`
+              : `apartadoId=${referenciaId}`;
+          const abonos = await fetchApi(`/abonos?${queryParam}`);
+          renderizarAbonosModal(abonos || []);
+        } catch (error) {
+          listaModalAbonos.innerHTML = `<tr><td colspan="4" class="table-cell text-center text-sm text-red-500">Error al cargar.</td></tr>`;
+        } finally {
+          showLoading("loading-modal-abonos", false);
+        }
+      }
+
+      // --- Rendering Functions ---
+      function renderizarClientes(clientes) {
+        const lista = document.getElementById("lista-clientes");
+        lista.innerHTML = "";
+        if (!clientes || clientes.length === 0) {
+          lista.innerHTML =
+            '<tr><td colspan="6" class="table-cell text-center text-gray-500">No hay clientes.</td></tr>';
+          return;
+        }
+        clientes.forEach((c) => {
+          const row = lista.insertRow();
+          row.innerHTML = `
+                    <td class="table-cell font-medium text-gray-900">${
+                      c.id
+                    }</td>
+                    <td class="table-cell text-gray-500">${c.nombre}</td>
+                    <td class="table-cell text-gray-500">${
+                      c.identificacion || "-"
+                    }</td>
+                    <td class="table-cell text-gray-500">${
+                      c.telefono || "-"
+                    }</td>
+                    <td class="table-cell text-gray-500">${c.email || "-"}</td>
+                    <td class="table-cell whitespace-nowrap">
+                        <button onclick="abrirModalEditarCliente(${
+                          c.id
+                        }, '${escapeHtml(c.nombre)}', '${escapeHtml(
+            c.telefono || ""
+          )}', '${escapeHtml(
+            c.email || ""
+          )}')" class="btn-icon text-blue-600" title="Editar Cliente"><i class="fas fa-edit"></i></button>
+                    </td>`;
+        });
+      }
+
+      function populateClienteSelects(clientes) {
+        const selects = document.querySelectorAll(
+          "#venta-cliente, #consulta-cliente, #apartado-cliente"
+        );
+        selects.forEach((select) => {
+          const currentValue = select.value;
+          const firstOptionHTML = select.options[0]
+            ? select.options[0].outerHTML
+            : '<option value="">-- Seleccione --</option>';
+          select.innerHTML = firstOptionHTML;
+          if (clientes && clientes.length > 0) {
+            clientes.forEach((cliente) => {
+              const option = document.createElement("option");
+              option.value = cliente.id;
+              option.textContent = `${cliente.nombre} (ID: ${cliente.id})`;
+              select.appendChild(option);
+            });
+          }
+          select.value = currentValue;
+        });
+      }
+
+      function renderizarVentas(ventas) {
+        const lista = document.getElementById("lista-ventas");
+        lista.innerHTML = "";
+        if (!ventas || ventas.length === 0) {
+          lista.innerHTML =
+            '<tr><td colspan="8" class="table-cell text-center text-gray-500">No hay ventas.</td></tr>';
+          return;
+        }
+        ventas.forEach((v) => {
+          const estadoClass =
+            v.estado === "Pagada"
+              ? "text-green-600 font-semibold"
+              : "text-red-600 font-semibold";
+          const nombreCliente = v.nombreCliente || `Cliente ID: ${v.clienteId}`;
+          const row = lista.insertRow();
+          row.innerHTML = `
+                    <td class="table-cell font-medium">${
+                      v.id
+                    }</td><td class="table-cell">${nombreCliente}</td>
+                    <td class="table-cell">${
+                      v.producto
+                    }</td><td class="table-cell">${formatCurrency(v.monto)}</td>
+                    <td class="table-cell ${estadoClass}">${formatCurrency(
+            v.saldoPendiente
+          )}</td><td class="table-cell">${formatDate(v.fecha)}</td>
+                    <td class="table-cell ${estadoClass}">${v.estado}</td>
+                    <td class="table-cell whitespace-nowrap">
+                        <button onclick="abrirModalEditarFecha('venta', ${
+                          v.id
+                        }, '${
+            v.fecha
+          }')" class="btn-icon text-yellow-600" title="Editar Fecha Venta"><i class="fas fa-calendar-alt"></i></button>
+                        <button onclick="eliminarVenta(${
+                          v.id
+                        })" class="btn-icon text-red-600" title="Eliminar Venta"><i class="fas fa-trash-alt"></i></button>
+                        <button onclick="verAbonos('venta', ${
+                          v.id
+                        })" class="btn-icon text-gray-600" title="Ver Abonos"><i class="fas fa-eye"></i></button>
+                    </td>`;
+        });
+      }
+
+      function renderizarApartados(apartados) {
+        const lista = document.getElementById("lista-apartados");
+        lista.innerHTML = "";
+        if (!apartados || apartados.length === 0) {
+          lista.innerHTML =
+            '<tr><td colspan="10" class="table-cell text-center text-gray-500">No hay apartados.</td></tr>';
+          return;
+        }
+        apartados.forEach((ap) => {
+          const nombreCliente =
+            ap.nombreCliente || `Cliente ID: ${ap.clienteId}`;
+          let estadoClass = "text-gray-700";
+          if (ap.estadoApartado === "Pagado")
+            estadoClass = "text-green-600 font-semibold";
+          else if (ap.estadoApartado === "Apartado")
+            estadoClass = "text-yellow-600 font-semibold";
+          else if (ap.estadoApartado === "Entregado")
+            estadoClass = "text-blue-600 font-semibold";
+          else if (ap.estadoApartado === "Cancelado")
+            estadoClass = "text-red-600 font-semibold line-through";
+
+          let accionesHtml = "";
+          if (
+            ap.estadoApartado === "Apartado" ||
+            (ap.estadoApartado === "Pagado" && ap.saldoPendiente > 0.001)
+          ) {
+            accionesHtml += `<button onclick="prepararAbonoParaApartado(${ap.id})" class="action-button btn-blue" title="Abonar"><i class="fas fa-hand-holding-usd"></i></button>`;
+          }
+          if (ap.estadoApartado === "Pagado") {
+            accionesHtml += `<button onclick="marcarApartadoEntregado(${ap.id})" class="action-button btn-green" title="Marcar Entregado"><i class="fas fa-check-circle"></i></button>`;
+          }
+          if (
+            ap.estadoApartado !== "Entregado" &&
+            ap.estadoApartado !== "Cancelado"
+          ) {
+            accionesHtml += `<button onclick="abrirModalEditarFecha('apartado', ${ap.id}, '${ap.fechaCreacion}')" class="action-button btn-yellow" title="Editar Fecha Creación"><i class="fas fa-calendar-alt"></i></button>`;
+          }
+          if (
+            ap.estadoApartado !== "Entregado" &&
+            ap.estadoApartado !== "Cancelado"
+          ) {
+            accionesHtml += `<button onclick="cancelarApartado(${ap.id})" class="action-button btn-red" title="Cancelar Apartado"><i class="fas fa-times-circle"></i></button>`;
+          }
+          accionesHtml += `<button onclick="verAbonos('apartado', ${ap.id})" class="action-button btn-gray" title="Ver Abonos"><i class="fas fa-eye"></i></button>`;
+          if (
+            ap.estadoApartado !== "Entregado" &&
+            ap.estadoApartado !== "Cancelado"
+          ) {
+            accionesHtml += `<button onclick="eliminarApartado(${ap.id})" class="action-button btn-red ml-1" title="Eliminar Apartado Definitivamente"><i class="fas fa-trash-alt"></i></button>`;
+          }
+
+          const row = lista.insertRow();
+          row.innerHTML = `
+                    <td class="table-cell font-medium">${
+                      ap.id
+                    }</td><td class="table-cell">${nombreCliente}</td>
+                    <td class="table-cell">${
+                      ap.producto
+                    }</td><td class="table-cell">${formatCurrency(
+            ap.montoTotal
+          )}</td>
+                    <td class="table-cell text-green-600">${formatCurrency(
+                      ap.totalAbonado
+                    )}</td>
+                    <td class="table-cell text-red-600 font-semibold">${formatCurrency(
+                      ap.saldoPendiente
+                    )}</td>
+                    <td class="table-cell ${estadoClass}">${
+            ap.estadoApartado
+          }</td><td class="table-cell">${formatDate(ap.fechaCreacion)}</td>
+                    <td class="table-cell">${
+                      ap.fechaEntrega ? formatDate(ap.fechaEntrega) : "-"
+                    }</td>
+                    <td class="table-cell whitespace-nowrap">${accionesHtml}</td>`;
+        });
+      }
+
+      function prepararAbonoParaApartado(apartadoId) {
+        changeTab("abonos");
+        document.getElementById("abonoTipoApartado").checked = true;
+        updateAbonoReferenciaSelect();
+        setTimeout(() => {
+          document.getElementById("abono-referencia-id").value = apartadoId;
+        }, 100);
+      }
+
+      function renderizarAbonosHistorial(abonos) {
+        const lista = document.getElementById("lista-abonos");
+        lista.innerHTML = "";
+        if (!abonos || abonos.length === 0) {
+          lista.innerHTML =
+            '<tr><td colspan="6" class="table-cell text-center text-gray-500">No hay abonos.</td></tr>';
+          return;
+        }
+        abonos.forEach((ab) => {
+          const row = lista.insertRow();
+          row.innerHTML = `
+                    <td class="table-cell font-medium">${
+                      ab.id
+                    }</td><td class="table-cell">${ab.ventaId || "-"}</td>
+                    <td class="table-cell">${
+                      ab.apartadoId || "-"
+                    }</td><td class="table-cell text-green-600">${formatCurrency(
+            ab.monto
+          )}</td>
+                    <td class="table-cell">${formatDate(
+                      ab.fecha
+                    )}</td><td class="table-cell comment-text">${
+            escapeHtml(ab.comentarios) || "-"
+          }</td>`;
+        });
+      }
+
+      function renderizarAbonosModal(abonos) {
+        const listaModalAbonos = document.getElementById("modal-lista-abonos");
+        listaModalAbonos.innerHTML = "";
+        if (abonos.length === 0) {
+          listaModalAbonos.innerHTML =
+            '<tr><td colspan="4" class="table-cell text-center text-sm text-gray-500">No hay abonos.</td></tr>';
+        } else {
+          abonos.forEach((abono) => {
+            const row = listaModalAbonos.insertRow();
+            const comentariosHtml = abono.comentarios
+              ? escapeHtml(abono.comentarios)
+              : "-";
+            row.innerHTML = `
+                        <td class="table-cell font-medium">${
+                          abono.id
+                        }</td><td class="table-cell text-green-600">${formatCurrency(
+              abono.monto
+            )}</td>
+                        <td class="table-cell">${formatDate(
+                          abono.fecha
+                        )}</td><td class="table-cell comment-text">${comentariosHtml}</td>`;
+          });
+        }
+      }
+
+      function updateAbonoReferenciaSelect() {
+        const tipo = document.querySelector(
+          'input[name="abonoTipoReferencia"]:checked'
+        ).value;
+        const select = document.getElementById("abono-referencia-id");
+        const label = document.getElementById("label-abono-referencia");
+        select.innerHTML = '<option value="">Seleccione</option>';
+        if (tipo === "venta") {
+          label.textContent = "Venta Pendiente:";
+          currentVentas
+            .filter((v) => v.estado === "Pendiente")
+            .forEach((v) => {
+              const option = document.createElement("option");
+              option.value = v.id;
+              option.textContent = `Venta #${v.id} - ${
+                v.nombreCliente || "Cliente ID: " + v.clienteId
+              } - Saldo: ${formatCurrency(v.saldoPendiente)}`;
+              select.appendChild(option);
+            });
+        } else {
+          label.textContent = "Apartado Pendiente:";
+          currentApartados
+            .filter(
+              (ap) =>
+                ap.estadoApartado === "Apartado" ||
+                (ap.estadoApartado === "Pagado" && ap.saldoPendiente > 0.001)
+            )
+            .forEach((ap) => {
+              const option = document.createElement("option");
+              option.value = ap.id;
+              option.textContent = `Apartado #${ap.id} - ${
+                ap.nombreCliente || "Cliente ID: " + ap.clienteId
+              } - Saldo: ${formatCurrency(ap.saldoPendiente)}`;
+              select.appendChild(option);
+            });
+        }
+      }
+
+      // --- Event Handlers ---
+      document
+        .getElementById("form-cliente")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const nuevoCliente = {
+            nombre: document.getElementById("cliente-nombre").value,
+            identificacion:
+              document.getElementById("cliente-identificacion").value || null,
+            telefono: document.getElementById("cliente-telefono").value || null,
+            email: document.getElementById("cliente-email").value || null,
+          };
+          try {
+            const clienteGuardado = await fetchApi("/clientes", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(nuevoCliente),
+            });
+            showNotification(
+              `Cliente '${clienteGuardado.nombre}' añadido.`,
+              "success"
+            );
+            e.target.reset();
+            fetchClientes();
+          } catch (error) {
+            showNotification(`Error: ${error.message}`, "error");
+          }
+        });
+
+      document
+        .getElementById("form-venta")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const monto = parseFloat(
+            document.getElementById("venta-monto").value
+          );
+          const clienteId = document.getElementById("venta-cliente").value;
+          if (!clienteId) {
+            showNotification("Seleccione cliente.", "warning");
+            return;
+          }
+          if (isNaN(monto) || monto <= 0) {
+            showNotification("Monto debe ser positivo.", "warning");
+            return;
+          }
+          const nuevaVenta = {
+            clienteId: parseInt(clienteId),
+            producto: document.getElementById("venta-producto").value,
+            monto: monto,
+            fecha:
+              document.getElementById("venta-fecha").value ||
+              new Date().toISOString().split("T")[0],
+          };
+          try {
+            await fetchApi("/ventas", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(nuevaVenta),
+            });
+            showNotification("Venta registrada.", "success");
+            e.target.reset();
+            document.getElementById("venta-fecha").value = new Date()
+              .toISOString()
+              .split("T")[0];
+            fetchVentas();
+            fetchAbonos();
+          } catch (error) {
+            showNotification(`Error: ${error.message}`, "error");
+          }
+        });
+
+      document
+        .getElementById("form-apartado")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const monto = parseFloat(
+            document.getElementById("apartado-monto").value
+          );
+          const clienteId = document.getElementById("apartado-cliente").value;
+          if (!clienteId) {
+            showNotification("Seleccione cliente.", "warning");
+            return;
+          }
+          if (isNaN(monto) || monto <= 0) {
+            showNotification("Monto debe ser positivo.", "warning");
+            return;
+          }
+          const nuevoApartado = {
+            clienteId: parseInt(clienteId),
+            producto: document.getElementById("apartado-producto").value,
+            montoTotal: monto,
+            fechaCreacion:
+              document.getElementById("apartado-fecha").value ||
+              new Date().toISOString().split("T")[0],
+          };
+          try {
+            await fetchApi("/apartados", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(nuevoApartado),
+            });
+            showNotification("Apartado creado.", "success");
+            e.target.reset();
+            document.getElementById("apartado-fecha").value = new Date()
+              .toISOString()
+              .split("T")[0];
+            fetchApartados();
+          } catch (error) {
+            showNotification(`Error: ${error.message}`, "error");
+          }
+        });
+
+      document
+        .querySelectorAll('input[name="abonoTipoReferencia"]')
+        .forEach((radio) => {
+          radio.addEventListener("change", updateAbonoReferenciaSelect);
+        });
+
+      document
+        .getElementById("form-abono")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const tipoReferencia = document.querySelector(
+            'input[name="abonoTipoReferencia"]:checked'
+          ).value;
+          const referenciaId = document.getElementById(
+            "abono-referencia-id"
+          ).value;
+          const montoAbono = parseFloat(
+            document.getElementById("abono-monto").value
+          );
+          const comentarios = document
+            .getElementById("abono-comentarios")
+            .value.trim();
+          if (!referenciaId) {
+            showNotification("Seleccione venta o apartado.", "warning");
+            return;
+          }
+          if (isNaN(montoAbono) || montoAbono <= 0) {
+            showNotification("Monto del abono debe ser positivo.", "warning");
+            return;
+          }
+          const nuevoAbono = {
+            monto: montoAbono,
+            fecha:
+              document.getElementById("abono-fecha").value ||
+              new Date().toISOString().split("T")[0],
+            comentarios: comentarios || null,
+          };
+          if (tipoReferencia === "venta")
+            nuevoAbono.ventaId = parseInt(referenciaId);
+          else nuevoAbono.apartadoId = parseInt(referenciaId);
+          try {
+            await fetchApi("/abonos", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(nuevoAbono),
+            });
+            showNotification("Abono registrado.", "success");
+            e.target.reset();
+            document.getElementById("abono-fecha").value = new Date()
+              .toISOString()
+              .split("T")[0];
+            document.getElementById("abonoTipoVenta").checked = true;
+            updateAbonoReferenciaSelect();
+            fetchVentas();
+            fetchApartados();
+            fetchAbonos();
+          } catch (error) {
+            showNotification(`Error: ${error.message}`, "error");
+          }
+        });
+
+      document
+        .getElementById("btn-filtrar")
+        .addEventListener("click", filtrarYRenderizarConsultas);
+
+      document
+        .getElementById("form-edit-cliente")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const id = document.getElementById("edit-cliente-id").value;
+          const telefono = document.getElementById(
+            "edit-cliente-telefono"
+          ).value;
+          const email = document.getElementById("edit-cliente-email").value;
+          try {
+            await fetchApi(`/clientes/${id}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                telefono: telefono || null,
+                email: email || null,
+              }),
+            });
+            showNotification("Cliente actualizado.", "success");
+            closeModal("editClienteModal");
+            fetchClientes();
+            fetchVentas();
+            fetchApartados();
+          } catch (error) {
+            showNotification(`Error: ${error.message}`, "error");
+          }
+        });
+
+      document
+        .getElementById("form-edit-fecha")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const id = document.getElementById("edit-fecha-item-id").value;
+          const tipo = document.getElementById("edit-fecha-item-tipo").value;
+          const nuevaFecha = document.getElementById("edit-fecha-nueva").value;
+          let endpoint = "";
+          let payload = {};
+          if (tipo === "venta") {
+            endpoint = `/ventas/${id}/fecha`;
+            payload = { fecha: nuevaFecha };
+          } else if (tipo === "apartado") {
+            endpoint = `/apartados/${id}/fecha`;
+            payload = { fechaCreacion: nuevaFecha };
+          } else {
+            showNotification("Tipo desconocido.", "error");
+            return;
+          }
+          try {
+            await fetchApi(endpoint, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            showNotification(`Fecha de ${tipo} #${id} actualizada.`, "success");
+            closeModal("editFechaModal");
+            if (tipo === "venta") fetchVentas();
+            if (tipo === "apartado") fetchApartados();
+            filtrarYRenderizarConsultas();
+          } catch (error) {
+            showNotification(`Error: ${error.message}`, "error");
+          }
+        });
+
+      async function marcarApartadoEntregado(apartadoId) {
+        if (!confirm(`¿Marcar apartado #${apartadoId} como ENTREGADO?`)) return;
+        try {
+          await fetchApi(`/apartados/${apartadoId}/entregar`, {
+            method: "PUT",
+          });
+          showNotification(`Apartado #${apartadoId} Entregado.`, "success");
+          fetchApartados();
+          filtrarYRenderizarConsultas();
+        } catch (error) {
+          showNotification(`Error: ${error.message}`, "error");
+        }
+      }
+      async function cancelarApartado(apartadoId) {
+        if (!confirm(`¿CANCELAR apartado #${apartadoId}?`)) return;
+        try {
+          await fetchApi(`/apartados/${apartadoId}/cancelar`, {
+            method: "PUT",
+          });
+          showNotification(`Apartado #${apartadoId} cancelado.`, "success");
+          fetchApartados();
+          filtrarYRenderizarConsultas();
+        } catch (error) {
+          showNotification(`Error: ${error.message}`, "error");
+        }
+      }
+      async function eliminarVenta(ventaId) {
+        if (confirm(`¿ELIMINAR venta #${ventaId} y sus abonos?`)) {
+          try {
+            await fetchApi(`/ventas/${ventaId}`, { method: "DELETE" });
+            showNotification(`Venta #${ventaId} eliminada.`, "success");
+            fetchVentas();
+            fetchAbonos();
+            filtrarYRenderizarConsultas();
+          } catch (error) {
+            showNotification(`Error: ${error.message}`, "error");
+          }
+        }
+      }
+      async function eliminarApartado(apartadoId) {
+        if (confirm(`¿ELIMINAR apartado #${apartadoId} y sus abonos?`)) {
+          try {
+            await fetchApi(`/apartados/${apartadoId}`, { method: "DELETE" });
+            showNotification(`Apartado #${apartadoId} eliminado.`, "success");
+            fetchApartados();
+            fetchAbonos();
+            filtrarYRenderizarConsultas();
+          } catch (error) {
+            showNotification(`Error: ${error.message}`, "error");
+          }
+        }
+      }
+
+      // --- Tab Management ---
+      function changeTab(tabId) {
+        document
+          .querySelectorAll(".tab-content")
+          .forEach((content) => content.classList.remove("active"));
+        document.querySelectorAll(".tab-button").forEach((button) => {
+          button.classList.remove("active-tab", "text-white", "bg-blue-600");
+          button.classList.add(
+            "inactive-tab",
+            "text-gray-500",
+            "hover:text-gray-700",
+            "hover:bg-gray-100"
+          );
+        });
+        document.getElementById(tabId).classList.add("active");
+        const activeButton = document.querySelector(
+          `.tab-button[data-tab="${tabId}"]`
+        );
+        activeButton.classList.add("active-tab", "text-white", "bg-blue-600");
+        activeButton.classList.remove(
+          "inactive-tab",
+          "text-gray-500",
+          "hover:text-gray-700",
+          "hover:bg-gray-100"
+        );
+
+        // More robust data loading strategy for tabs
+        const loadClientsIfNeeded = async () => {
+          if (currentClientes.length === 0) {
+            await fetchClientes(); // fetchClientes now populates selects
+          } else {
+            populateClienteSelects(currentClientes); // Ensure selects are populated if clients already loaded
+          }
+        };
+
+        const loadVentasIfNeeded = async () => {
+          if (currentVentas.length === 0) {
+            await fetchVentas();
+          }
+        };
+
+        const loadApartadosIfNeeded = async () => {
+          if (currentApartados.length === 0) {
+            await fetchApartados();
+          } else {
+            // If already loaded, still refresh for latest status
+            await fetchApartados();
+          }
+        };
+
+        switch (tabId) {
+          case "clientes":
+            loadClientsIfNeeded().then(() =>
+              renderizarClientes(currentClientes)
+            );
+            break;
+          case "ventas":
+            loadClientsIfNeeded().then(() => {
+              loadVentasIfNeeded().then(() => renderizarVentas(currentVentas));
+            });
+            break;
+          case "apartados":
+            loadClientsIfNeeded().then(() => {
+              fetchApartados(); // Always fetch latest apartados for this tab
+            });
+            break;
+          case "abonos":
+            loadClientsIfNeeded().then(async () => {
+              await Promise.all([
+                loadVentasIfNeeded(),
+                loadApartadosIfNeeded(),
+              ]);
+              fetchAbonos(); // Fetch abonos history
+              updateAbonoReferenciaSelect();
+            });
+            break;
+          case "consultas":
+            loadClientsIfNeeded().then(async () => {
+              await Promise.all([
+                loadVentasIfNeeded(),
+                loadApartadosIfNeeded(),
+              ]);
+              populateConsultaEstadoSelect();
+              filtrarYRenderizarConsultas();
+            });
+            break;
+        }
+      }
+
+      // --- Consultation Filtering ---
+      function populateConsultaEstadoSelect() {
+        const tipoConsulta = document.getElementById("consulta-tipo").value;
+        const selectEstado = document.getElementById("consulta-estado");
+        const currentEstado = selectEstado.value;
+        selectEstado.innerHTML = '<option value="">Todos</option>';
+        if (tipoConsulta === "ventas" || tipoConsulta === "todos") {
+          selectEstado.add(new Option("Pendiente (Venta)", "Pendiente"));
+          selectEstado.add(new Option("Pagada (Venta)", "Pagada"));
+        }
+        if (tipoConsulta === "apartados" || tipoConsulta === "todos") {
+          selectEstado.add(new Option("Apartado", "Apartado"));
+          selectEstado.add(new Option("Pagado (Apartado)", "Pagado"));
+          selectEstado.add(new Option("Entregado", "Entregado"));
+          selectEstado.add(new Option("Cancelado", "Cancelado"));
+        }
+        selectEstado.value = currentEstado;
+      }
+      document
+        .getElementById("consulta-tipo")
+        .addEventListener("change", () => {
+          populateConsultaEstadoSelect();
+          filtrarYRenderizarConsultas();
+        });
+
+      function filtrarYRenderizarConsultas() {
+        const clienteIdFiltro =
+          document.getElementById("consulta-cliente").value;
+        const tipoFiltro = document.getElementById("consulta-tipo").value;
+        const estadoFiltro = document.getElementById("consulta-estado").value;
+        const lista = document.getElementById("lista-consultas");
+        const totalPendienteDiv = document.getElementById(
+          "total-pendiente-consultas"
+        );
+        lista.innerHTML = "";
+        let totalPendienteGeneral = 0;
+        let resultados = [];
+
+        if (tipoFiltro === "ventas" || tipoFiltro === "todos") {
+          currentVentas.forEach((v) => {
+            const matchCliente =
+              !clienteIdFiltro || v.clienteId === parseInt(clienteIdFiltro);
+            const matchEstado = !estadoFiltro || v.estado === estadoFiltro;
+            if (matchCliente && matchEstado) {
+              resultados.push({
+                ...v,
+                tipoTransaccion: "Venta",
+                montoOriginal: v.monto,
+                fechaOriginal: v.fecha,
+                estadoOriginal: v.estado,
+              });
+              if (v.estado === "Pendiente")
+                totalPendienteGeneral += v.saldoPendiente;
+            }
+          });
+        }
+        if (tipoFiltro === "apartados" || tipoFiltro === "todos") {
+          currentApartados.forEach((ap) => {
+            const matchCliente =
+              !clienteIdFiltro || ap.clienteId === parseInt(clienteIdFiltro);
+            const matchEstado =
+              !estadoFiltro || ap.estadoApartado === estadoFiltro;
+            if (matchCliente && matchEstado) {
+              resultados.push({
+                ...ap,
+                id: ap.id,
+                tipoTransaccion: "Apartado",
+                clienteId: ap.clienteId,
+                nombreCliente: ap.nombreCliente,
+                producto: ap.producto,
+                montoOriginal: ap.montoTotal,
+                saldoPendiente: ap.saldoPendiente,
+                fechaOriginal: ap.fechaCreacion,
+                estadoOriginal: ap.estadoApartado,
+              });
+              if (
+                ap.estadoApartado === "Apartado" ||
+                (ap.estadoApartado === "Pagado" && ap.saldoPendiente > 0.001)
+              ) {
+                totalPendienteGeneral += ap.saldoPendiente;
+              }
+            }
+          });
+        }
+        resultados.sort(
+          (a, b) => new Date(b.fechaOriginal) - new Date(a.fechaOriginal)
+        );
+
+        if (resultados.length === 0) {
+          lista.innerHTML =
+            '<tr><td colspan="9" class="table-cell text-center text-gray-500">No se encontraron.</td></tr>';
+          totalPendienteDiv.textContent = "";
+          return;
+        }
+        resultados.forEach((item) => {
+          const row = lista.insertRow();
+          let estadoClass = "";
+          if (item.tipoTransaccion === "Venta")
+            estadoClass =
+              item.estadoOriginal === "Pagada"
+                ? "text-green-600 font-semibold"
+                : "text-red-600 font-semibold";
+          else {
+            if (item.estadoOriginal === "Pagado")
+              estadoClass = "text-green-600 font-semibold";
+            else if (item.estadoOriginal === "Apartado")
+              estadoClass = "text-yellow-600 font-semibold";
+            else if (item.estadoOriginal === "Entregado")
+              estadoClass = "text-blue-600 font-semibold";
+            else if (item.estadoOriginal === "Cancelado")
+              estadoClass = "text-red-600 font-semibold line-through";
+          }
+          const nombreCliente =
+            item.nombreCliente || `Cliente ID: ${item.clienteId}`;
+          let accionesConsultaHtml = `<button onclick="verAbonos('${item.tipoTransaccion.toLowerCase()}', ${
+            item.id
+          })" class="btn-icon text-gray-600" title="Ver Abonos"><i class="fas fa-eye"></i></button>`;
+          if (item.tipoTransaccion === "Venta") {
+            accionesConsultaHtml += `<button onclick="abrirModalEditarFecha('venta', ${item.id}, '${item.fechaOriginal}')" class="btn-icon text-yellow-600" title="Editar Fecha"><i class="fas fa-calendar-alt"></i></button>`;
+            accionesConsultaHtml += `<button onclick="eliminarVenta(${item.id})" class="btn-icon text-red-600" title="Eliminar Venta"><i class="fas fa-trash-alt"></i></button>`;
+          } else {
+            if (
+              item.estadoOriginal === "Apartado" ||
+              (item.estadoOriginal === "Pagado" && item.saldoPendiente > 0.001)
+            ) {
+              accionesConsultaHtml += `<button onclick="prepararAbonoParaApartado(${item.id})" class="action-button btn-blue" title="Abonar"><i class="fas fa-hand-holding-usd"></i></button>`;
+            }
+            if (item.estadoOriginal === "Pagado") {
+              accionesConsultaHtml += `<button onclick="marcarApartadoEntregado(${item.id})" class="action-button btn-green" title="Marcar Entregado"><i class="fas fa-check-circle"></i></button>`;
+            }
+            if (
+              item.estadoOriginal !== "Entregado" &&
+              item.estadoOriginal !== "Cancelado"
+            ) {
+              accionesConsultaHtml += `<button onclick="abrirModalEditarFecha('apartado', ${item.id}, '${item.fechaOriginal}')" class="btn-icon text-yellow-600" title="Editar Fecha"><i class="fas fa-calendar-alt"></i></button>`;
+              accionesConsultaHtml += `<button onclick="eliminarApartado(${item.id})" class="btn-icon text-red-600" title="Eliminar Apartado"><i class="fas fa-trash-alt"></i></button>`;
+            }
+          }
+          row.innerHTML = `
+                    <td class="table-cell font-medium">${
+                      item.id
+                    }</td><td class="table-cell">${item.tipoTransaccion}</td>
+                    <td class="table-cell">${nombreCliente}</td><td class="table-cell">${
+            item.producto
+          }</td>
+                    <td class="table-cell">${formatCurrency(
+                      item.montoOriginal
+                    )}</td><td class="table-cell text-red-600 font-semibold">${formatCurrency(
+            item.saldoPendiente
+          )}</td>
+                    <td class="table-cell">${formatDate(
+                      item.fechaOriginal
+                    )}</td><td class="table-cell ${estadoClass}">${
+            item.estadoOriginal
+          }</td>
+                    <td class="table-cell whitespace-nowrap">${accionesConsultaHtml}</td>`;
+        });
+        totalPendienteDiv.textContent = `Total Pendiente (Filtro Actual): ${formatCurrency(
+          totalPendienteGeneral
+        )}`;
+      }
+
+      // --- Modal Management ---
+      function openModal(modalId) {
+        document.getElementById(modalId).style.display = "block";
+      }
+      function closeModal(modalId) {
+        document.getElementById(modalId).style.display = "none";
+      }
+      function abrirModalEditarCliente(id, nombre, telefono, email) {
+        document.getElementById("edit-cliente-id").value = id;
+        document.getElementById("edit-cliente-nombre").value = nombre;
+        document.getElementById("edit-cliente-telefono").value = telefono;
+        document.getElementById("edit-cliente-email").value = email;
+        document.getElementById(
+          "editClienteModalTitleId"
+        ).textContent = `ID: ${id}`;
+        openModal("editClienteModal");
+      }
+      function abrirModalEditarFecha(tipo, id, fechaActual) {
+        document.getElementById("edit-fecha-item-id").value = id;
+        document.getElementById("edit-fecha-item-tipo").value = tipo;
+        document.getElementById("edit-fecha-nueva").value =
+          fechaActual.split("T")[0];
+        document.getElementById("editFechaModalTipo").textContent =
+          tipo.charAt(0).toUpperCase() + tipo.slice(1);
+        document.getElementById("editFechaModalId").textContent = id;
+        openModal("editFechaModal");
+      }
+      function verAbonos(tipoReferencia, referenciaId) {
+        document.getElementById("modal-referencia-tipo").textContent =
+          tipoReferencia.charAt(0).toUpperCase() + tipoReferencia.slice(1);
+        document.getElementById("modal-referencia-id").textContent =
+          referenciaId;
+        openModal("abonosModal");
+        fetchAbonosPorReferencia(tipoReferencia, referenciaId);
+      }
+      window.onclick = function (event) {
+        if (event.target.classList.contains("modal")) {
+          closeModal(event.target.id);
+        }
+      };
+
+      // --- Notifications ---
+      function showNotification(message, type = "info") {
+        const notification = document.createElement("div");
+        let bgColor = "bg-blue-500";
+        if (type === "success") bgColor = "bg-green-500";
+        if (type === "error") bgColor = "bg-red-500";
+        if (type === "warning") bgColor = "bg-yellow-500";
+        notification.className = `fixed bottom-5 right-5 ${bgColor} text-white py-2 px-4 rounded-md shadow-lg text-sm z-50 transition-opacity duration-300 max-w-sm`;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        setTimeout(() => {
+          notification.style.opacity = "0";
+          setTimeout(() => notification.remove(), 300);
+        }, 3500);
+      }
+
+      // --- Initial Load ---
+      document.addEventListener("DOMContentLoaded", () => {
+        const today = new Date().toISOString().split("T")[0];
+        document.getElementById("venta-fecha").value = today;
+        document.getElementById("apartado-fecha").value = today;
+        document.getElementById("abono-fecha").value = today;
+
+        // Fetch initial data and set the first tab
+        fetchClientes().then(() => {
+          // These can be fetched after clients are available for dropdowns
+          Promise.all([fetchVentas(), fetchApartados()]).then(() => {
+            updateAbonoReferenciaSelect(); // Populate abono dropdown once ventas/apartados are loaded
+            populateConsultaEstadoSelect(); // Populate consulta estado dropdown
+            // Set clientes as the initial active tab after all initial data is potentially fetched
+            changeTab("clientes");
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
+<!-- **Cambios principales en el frontend:** 1. **Eliminación de Funciones
+Duplicadas:** Se eliminó la sección al final del script que redefinía muchas
+funciones. 2. **Lógica de `changeTab` Mejorada:** * Ahora, al cambiar a una
+pestaña, se verifica si los datos necesarios (como `currentClientes`) están
+cargados. * Si no están cargados, se llama a la función `fetch` correspondiente.
+* Crucialmente, después de asegurar que `currentClientes` tiene datos, se llama
+explícitamente a `populateClienteSelects(currentClientes)` cuando se entra a las
+pestañas de "Ventas" o "Apartados" para asegurar que los menús desplegables de
+clientes en esos formularios se llenen. * Se usa `async/await` dentro de
+`changeTab` y `Promise.all` para manejar mejor la carga de datos dependientes
+antes de actualizar la UI. Después de reemplazar tu `index.html` con este
+código, reinicia tu servidor backend y refresca la página en el navegador
+(preferiblemente con un hard refresh: Ctrl+Shift+R o Cmd+Shift+R). El problema
+con la carga de clientes en el formulario de ventas debería estar resuel ``` -->
